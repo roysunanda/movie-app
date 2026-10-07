@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDebounce } from "react-use";
 import Search from "./components/Search";
 import { useEffect } from "react";
 import MovieCard from "./components/MovieCard";
@@ -19,21 +20,26 @@ function App() {
   const [errorMessage, setErrorMessage] = useState(null);
   const [movieList, setMovieList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [debouncedSearchTerm, useDebouncedSearchTerm] = useState("");
+
+  useDebounce(() => useDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
 
   // console.log(API_KEY);
 
-  const fetchMovies = async () => {
+  const fetchMovies = async (query = "") => {
     setIsLoading(true);
     setErrorMessage("");
 
     try {
-      const endpoint = `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
+      const endpoint = query
+        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
+        : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
       const response = await fetch(endpoint, API_OPTIONS);
 
       if (!response.ok) throw new Error("failed to fetch movies");
 
       const data = await response.json();
-      console.log(data);
+      // console.log(data);
 
       if (data.Response === "False") {
         setErrorMessage(data.Error || "Failed to fetch movies.");
@@ -51,8 +57,8 @@ function App() {
   };
 
   useEffect(() => {
-    fetchMovies();
-  }, []);
+    fetchMovies(debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
   return (
     <main>
       <div className="pattern"></div>
