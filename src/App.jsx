@@ -3,6 +3,7 @@ import { useDebounce } from "react-use";
 import Search from "./components/Search";
 import { useEffect } from "react";
 import MovieCard from "./components/MovieCard";
+import { getTrendingMovies, updateSearchCount } from "./lib/appwrite";
 
 const API_BASE_URL = `https://api.themoviedb.org/3`;
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -21,6 +22,7 @@ function App() {
   const [movieList, setMovieList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [debouncedSearchTerm, useDebouncedSearchTerm] = useState("");
+  const [trendingMovies, setTrendingMovies] = useState([]);
 
   useDebounce(() => useDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
 
@@ -48,6 +50,10 @@ function App() {
       }
 
       setMovieList(data.results || []);
+
+      if (query && data.results.length > 0) {
+        await updateSearchCount(query, data.results[0]);
+      }
     } catch (error) {
       console.error(error.message);
       setErrorMessage(`error fetching movies. please try again later.`);
@@ -56,9 +62,23 @@ function App() {
     }
   };
 
+  const loadTrendingMovies = async () => {
+    try {
+      const movies = await getTrendingMovies();
+      setTrendingMovies(movies);
+    } catch (error) {
+      console.error(error.message);
+    }
+  };
+
   useEffect(() => {
     fetchMovies(debouncedSearchTerm);
   }, [debouncedSearchTerm]);
+
+  useEffect(() => {
+    loadTrendingMovies();
+  }, []);
+
   return (
     <main>
       <div className="pattern"></div>
@@ -77,6 +97,22 @@ function App() {
             setSearchTerm={setSearchTerm}
           />
         </header>
+        {trendingMovies.length > 0 && (
+          <section className="trending">
+            <h2>Trending Movies</h2>
+            <ul>
+              {trendingMovies.map((movie, index) => (
+                <li key={movie.$id}>
+                  <p>{index + 1}</p>
+                  <img
+                    src={movie.poster_url}
+                    alt={movie.title}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         <section className="all-movies">
           <h2>All Movies</h2>
           {/* {errorMessage && <p className="text-red-500">{errorMessage}</p>} */}
